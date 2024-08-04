@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Sauve <paul@technove.co>
+Date: Mon, 26 Apr 2021 11:34:29 -0500
+Subject: [PATCH] Config to disable method profiler
+
+
+diff --git a/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java b/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
+index bef47a5826edaa7f6aa19369e27693dea780042e..1e8d307f39ab3a427745ce13a3aab91787b3fd8d 100644
+--- a/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
++++ b/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
+@@ -220,4 +220,10 @@ public class PufferfishConfig {
+ 	}
+ 
+ 
+-}
+\ No newline at end of file
++    public static boolean disableMethodProfiler;
++    private static void miscSettings() {
++        disableMethodProfiler = getBoolean("misc.disable-method-profiler", true);
++        setComment("misc", "Settings for things that don't belong elsewhere");
++    }
++
++}
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 23ddd26af762c1cd7fb3920669abb96b3213ab37..0c32003c723ae2d180e8f00473b4021d15201bfb 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2577,6 +2577,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+     }
+ 
+     public ProfilerFiller getProfiler() {
++        if (gg.pufferfish.pufferfish.PufferfishConfig.disableMethodProfiler) return net.minecraft.util.profiling.InactiveProfiler.INSTANCE;
+         return this.profiler;
+     }
+ 
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index e2a0487089eb5a7bdc1433e4c75f69d8e9f9d5f9..d0bff6392186d919caa3b3e1c0dcc3be3ed24171 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -1944,6 +1944,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable, ca.spottedl
+     }
+ 
+     public ProfilerFiller getProfiler() {
++        if (gg.pufferfish.pufferfish.PufferfishConfig.disableMethodProfiler) return net.minecraft.util.profiling.InactiveProfiler.INSTANCE; // Pufferfish
+         return (ProfilerFiller) this.profiler.get();
+     }
+ 

@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul <paul@technove.co>
+Date: Fri, 2 Jul 2021 18:27:12 -0500
+Subject: [PATCH] Remove lambda from ticking guard
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 26ca25e9b6ae1c6d0ab90686ba07eca170ba08cf..5b04e02eef00e7d52fe641d4c93b80b77eb35728 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -735,7 +735,20 @@ public class ServerLevel extends Level implements WorldGenLevel, ca.spottedleaf.
+                             }
+ 
+                             gameprofilerfiller.push("tick");
+-                            this.guardEntityTick(this::tickNonPassenger, entity);
++                        // Pufferfish start - copied from this.guardEntityTick
++                        try {
++                            this.tickNonPassenger(entity); // Pufferfish - changed
++                        } catch (Throwable throwable) {
++                            if (throwable instanceof ThreadDeath) throw throwable; // Paper
++                            // Paper start - Prevent tile entity and entity crashes
++                            final String msg = String.format("Entity threw exception at %s:%s,%s,%s", entity.level().getWorld().getName(), entity.getX(), entity.getY(), entity.getZ());
++                            MinecraftServer.LOGGER.error(msg, throwable);
++                            getCraftServer().getPluginManager().callEvent(new com.destroystokyo.paper.event.server.ServerExceptionEvent(new com.destroystokyo.paper.exception.ServerInternalException(msg, throwable)));
++                            entity.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DISCARD);
++                            // Paper end
++                        }
++                        this.moonrise$midTickTasks(); // Paper - rewrite chunk system
++                        // Pufferfish end
+                             gameprofilerfiller.pop();
+                         }
+                     }
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index d0bff6392186d919caa3b3e1c0dcc3be3ed24171..d3cc65612c44f42ecae2e09b942438a03bc244bd 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -1418,16 +1418,16 @@ public abstract class Level implements LevelAccessor, AutoCloseable, ca.spottedl
+     public <T extends Entity> void guardEntityTick(Consumer<T> tickConsumer, T entity) {
+         try {
+             tickConsumer.accept(entity);
+-        } catch (Throwable throwable) {
++        } catch (Throwable throwable) { // Pufferfish - diff on change ServerLevel.tick
+             if (throwable instanceof ThreadDeath) throw throwable; // Paper
+             // Paper start - Prevent block entity and entity crashes
+             final String msg = String.format("Entity threw exception at %s:%s,%s,%s", entity.level().getWorld().getName(), entity.getX(), entity.getY(), entity.getZ());
+             MinecraftServer.LOGGER.error(msg, throwable);
+             getCraftServer().getPluginManager().callEvent(new com.destroystokyo.paper.event.server.ServerExceptionEvent(new com.destroystokyo.paper.exception.ServerInternalException(msg, throwable))); // Paper - ServerExceptionEvent
+-            entity.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DISCARD);
++            entity.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DISCARD); // Pufferfish - diff on change ServerLevel.tick
+             // Paper end - Prevent block entity and entity crashes
+         }
+-        this.moonrise$midTickTasks(); // Paper - rewrite chunk system
++        this.moonrise$midTickTasks(); // Paper - rewrite chunk system // Pufferfish - diff on change ServerLevel.tick
+     }
+     // Paper start - Option to prevent armor stands from doing entity lookups
+     @Override

@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kevin Raneri <kevin.raneri@gmail.com>
+Date: Wed, 27 Dec 2023 22:49:53 -0500
+Subject: [PATCH] TPS catchup
+
+
+diff --git a/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java b/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
+index d2693c93af67060bad4ccebc56053f7f174f5100..9319dc4e0b49a9ba9d8fad17238dc1d895ef6fc5 100644
+--- a/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
++++ b/src/main/java/gg/pufferfish/pufferfish/PufferfishConfig.java
+@@ -180,7 +180,15 @@ public class PufferfishConfig {
+ 				"disabling this option.",
+ 				"This can be overridden per-player with the permission pufferfish.usebooks");
+ 	}
+-	
++
++	public static boolean tpsCatchup;
++	private static void tpsCatchup() {
++		tpsCatchup = getBoolean("tps-catchup", true,
++				"If this setting is true, the server will run faster after a lag spike in",
++				"an attempt to maintain 20 TPS. This option (defaults to true per",
++				"spigot/paper) can cause mobs to move fast after a lag spike.");
++	}
++
+ 	public static boolean enableSuffocationOptimization;
+ 	private static void suffocationOptimization() {
+ 		enableSuffocationOptimization = getBoolean("enable-suffocation-optimization", true,
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 0c32003c723ae2d180e8f00473b4021d15201bfb..bc65ea6a2059c19a4aeb99cef6f9dad15e7aa9ff 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -1314,6 +1314,12 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+                 this.profiler.popPush("nextTickWait");
+                 this.mayHaveDelayedTasks = true;
+                 this.delayedTasksMaxNextTickTimeNanos = Math.max(Util.getNanos() + i, this.nextTickTimeNanos);
++                // Pufferfish start - tps catchup
++                if (!gg.pufferfish.pufferfish.PufferfishConfig.tpsCatchup) {
++                    this.nextTickTimeNanos = currentTime + i;
++                    this.delayedTasksMaxNextTickTimeNanos = nextTickTimeNanos;
++                }
++                // Pufferfish end
+                 this.startMeasuringTaskExecutionTime();
+                 this.waitUntilNextTick();
+                 this.finishMeasuringTaskExecutionTime();

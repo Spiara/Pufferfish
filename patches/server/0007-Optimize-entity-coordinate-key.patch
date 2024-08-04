@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kevin Raneri <kevin.raneri@gmail.com>
+Date: Tue, 9 Nov 2021 14:33:16 -0500
+Subject: [PATCH] Optimize entity coordinate key
+
+When executing getCoordinateKey for entities (a hotpath), the JVM is
+required to repeatedly cast doubles to longs. The performance impact of
+this depends on the CPU architecture, but generally switching between
+FPU and ALU incurs a significant performance hit. The casted/rounded
+data is already available in the blockPosition struct, so we use that
+instead of re-doing the casting.
+
+diff --git a/src/main/java/ca/spottedleaf/moonrise/common/util/CoordinateUtils.java b/src/main/java/ca/spottedleaf/moonrise/common/util/CoordinateUtils.java
+index 31b92bd48828cbea25b44a9f0f96886347aa1ae6..06d78da51e6590eb4c7d3bd9dde25b6c62149c03 100644
+--- a/src/main/java/ca/spottedleaf/moonrise/common/util/CoordinateUtils.java
++++ b/src/main/java/ca/spottedleaf/moonrise/common/util/CoordinateUtils.java
+@@ -16,7 +16,7 @@ public final class CoordinateUtils {
+     }
+ 
+     public static long getChunkKey(final Entity entity) {
+-        return ((Mth.lfloor(entity.getZ()) >> 4) << 32) | ((Mth.lfloor(entity.getX()) >> 4) & 0xFFFFFFFFL);
++        return ((entity.blockPosition.getZ() >> 4) << 32) | ((entity.blockPosition.getX() >> 4) & 0xFFFFFFFFL); // Pufferfish - eliminate double->long cast in hotpath
+     }
+ 
+     public static long getChunkKey(final ChunkPos pos) {
+diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
+index 490ee48346395fcbaf2eb0151e9248f18974fea6..ca95cab3965b37558efa840fb07c5be8be12d01a 100644
+--- a/src/main/java/net/minecraft/world/entity/Entity.java
++++ b/src/main/java/net/minecraft/world/entity/Entity.java
+@@ -315,7 +315,7 @@ public abstract class Entity implements SyncedDataHolder, Nameable, EntityAccess
+     public double yo;
+     public double zo;
+     private Vec3 position;
+-    private BlockPos blockPosition;
++    public BlockPos blockPosition; // Pufferfish - private->public
+     private ChunkPos chunkPosition;
+     private Vec3 deltaMovement;
+     private float yRot;

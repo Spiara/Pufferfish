@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kevin Raneri <kevin.raneri@gmail.com>
+Date: Tue, 9 Nov 2021 23:36:56 -0500
+Subject: [PATCH] Pufferfish Utils
+
+
+diff --git a/src/main/java/gg/pufferfish/pufferfish/PufferfishLogger.java b/src/main/java/gg/pufferfish/pufferfish/PufferfishLogger.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..53f2df00c6809618a9ee3d2ea72e85e8052fbcf1
+--- /dev/null
++++ b/src/main/java/gg/pufferfish/pufferfish/PufferfishLogger.java
+@@ -0,0 +1,16 @@
++package gg.pufferfish.pufferfish;
++
++import java.util.logging.Level;
++import java.util.logging.Logger;
++import org.bukkit.Bukkit;
++
++public class PufferfishLogger extends Logger {
++    public static final PufferfishLogger LOGGER = new PufferfishLogger();
++
++    private PufferfishLogger() {
++        super("Pufferfish", null);
++
++        setParent(Bukkit.getLogger());
++        setLevel(Level.ALL);
++    }
++}
